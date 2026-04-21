@@ -1,0 +1,334 @@
+import React, { useState, useMemo } from 'react';
+import { 
+  Wallet, 
+  ArrowUpCircle, 
+  ArrowDownCircle, 
+  Plus, 
+  History, 
+  Trash2, 
+  Coffee, 
+  Car, 
+  Gamepad2, 
+  ShoppingBag, 
+  FileText, 
+  Banknote,
+  MoreHorizontal
+} from 'lucide-react';
+
+export default function App() {
+  // State untuk menyimpan daftar transaksi dengan data awal
+  const [transactions, setTransactions] = useState([
+    { id: 1, type: 'income', amount: 2500000, category: 'Uang Saku', date: '2026-04-01', note: 'Jatah bulan ini' },
+    { id: 2, type: 'expense', amount: 500000, category: 'Tagihan', date: '2026-04-02', note: 'Kos & Kuota' },
+    { id: 3, type: 'expense', amount: 35000, category: 'Makan & Minum', date: '2026-04-05', note: 'Kopi Susu' },
+    { id: 4, type: 'expense', amount: 150000, category: 'Hiburan', date: '2026-04-10', note: 'Nonton Bioskop' },
+    { id: 5, type: 'expense', amount: 200000, category: 'Belanja', date: '2026-04-15', note: 'Baju Promo' },
+  ]);
+
+  // State untuk kontrol modal form
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    type: 'expense',
+    amount: '',
+    category: 'Makan & Minum',
+    date: new Date().toISOString().split('T')[0],
+    note: ''
+  });
+
+  // Opsi Kategori
+  const categories = {
+    expense: ['Makan & Minum', 'Transportasi', 'Hiburan', 'Belanja', 'Tagihan', 'Lainnya'],
+    income: ['Uang Saku', 'Gaji/Freelance', 'Bonus', 'Lainnya']
+  };
+
+  // Helper untuk memilih Ikon berdasarkan kategori
+  const getCategoryIcon = (category) => {
+    switch(category) {
+      case 'Makan & Minum': return <Coffee size={18} className="text-orange-400" />;
+      case 'Transportasi': return <Car size={18} className="text-blue-400" />;
+      case 'Hiburan': return <Gamepad2 size={18} className="text-purple-400" />;
+      case 'Belanja': return <ShoppingBag size={18} className="text-pink-400" />;
+      case 'Tagihan': return <FileText size={18} className="text-red-400" />;
+      case 'Uang Saku': 
+      case 'Gaji/Freelance': return <Banknote size={18} className="text-emerald-400" />;
+      default: return <MoreHorizontal size={18} className="text-gray-400" />;
+    }
+  };
+
+  // Kalkulasi Keuangan (Total, Saldo, Persentase)
+  const { totalIncome, totalExpense, balance, expenseByCategory } = useMemo(() => {
+    let income = 0;
+    let expense = 0;
+    const categoryTotals = {};
+
+    transactions.forEach(t => {
+      if (t.type === 'income') {
+        income += t.amount;
+      } else {
+        expense += t.amount;
+        categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount;
+      }
+    });
+
+    const sortedCategories = Object.keys(categoryTotals)
+      .map(key => ({
+        name: key,
+        amount: categoryTotals[key],
+        percentage: expense > 0 ? ((categoryTotals[key] / expense) * 100).toFixed(1) : 0
+      }))
+      .sort((a, b) => b.amount - a.amount);
+
+    return { totalIncome: income, totalExpense: expense, balance: income - expense, expenseByCategory: sortedCategories };
+  }, [transactions]);
+
+  // Format ke Rupiah
+  const formatIDR = (amount) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency', currency: 'IDR', minimumFractionDigits: 0
+    }).format(amount);
+  };
+
+  // Fungsi menyimpan data
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!formData.amount || formData.amount <= 0) return;
+
+    const newTx = {
+      id: Date.now(),
+      type: formData.type,
+      amount: Number(formData.amount),
+      category: formData.category,
+      date: formData.date,
+      note: formData.note || 'Tanpa keterangan'
+    };
+
+    setTransactions([newTx, ...transactions].sort((a, b) => new Date(b.date) - new Date(a.date)));
+    setIsFormOpen(false);
+    setFormData({ ...formData, amount: '', note: '' });
+  };
+
+  // Fungsi hapus data
+  const handleDelete = (id) => {
+    setTransactions(transactions.filter(t => t.id !== id));
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex justify-center">
+      <div className="w-full max-w-md bg-slate-900 min-h-screen shadow-2xl relative flex flex-col">
+        
+        {/* Header Section */}
+        <header className="p-6 pb-8 bg-gradient-to-br from-indigo-900 to-slate-900 rounded-b-[2rem] shadow-lg">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <p className="text-indigo-200 text-sm font-medium">Hai, Anak Muda! 👋</p>
+              <h1 className="text-2xl font-bold text-white tracking-tight">DompetMuda</h1>
+            </div>
+            <div className="bg-slate-800/50 p-2 rounded-full backdrop-blur-sm">
+              <Wallet size={24} className="text-indigo-400" />
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center">
+            <p className="text-slate-300 text-sm mb-1">Sisa Saldo</p>
+            <h2 className="text-4xl font-extrabold text-white tracking-tight">
+              {formatIDR(balance)}
+            </h2>
+          </div>
+
+          <div className="flex gap-4 mt-6">
+            <div className="flex-1 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 flex items-center gap-3">
+              <div className="bg-emerald-500/20 p-2 rounded-full">
+                <ArrowDownCircle size={20} className="text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-xs text-emerald-200/70">Pemasukan</p>
+                <p className="text-sm font-bold text-emerald-400">{formatIDR(totalIncome)}</p>
+              </div>
+            </div>
+            <div className="flex-1 bg-rose-500/10 border border-rose-500/20 rounded-2xl p-4 flex items-center gap-3">
+              <div className="bg-rose-500/20 p-2 rounded-full">
+                <ArrowUpCircle size={20} className="text-rose-400" />
+              </div>
+              <div>
+                <p className="text-xs text-rose-200/70">Pengeluaran</p>
+                <p className="text-sm font-bold text-rose-400">{formatIDR(totalExpense)}</p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Konten Utama */}
+        <main className="flex-1 overflow-y-auto p-6 pb-24 space-y-8 no-scrollbar">
+          
+          {/* Analisis Bocor Halus */}
+          {totalExpense > 0 && (
+            <section>
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <History size={18} className="text-indigo-400"/>
+                Analisis Bocor Halus
+              </h3>
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-4 space-y-4">
+                {expenseByCategory.map((cat, index) => (
+                  <div key={index} className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-300">{cat.name}</span>
+                      <span className="font-medium text-rose-400">{formatIDR(cat.amount)}</span>
+                    </div>
+                    <div className="w-full bg-slate-700 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full ${index === 0 ? 'bg-rose-500' : index === 1 ? 'bg-orange-400' : 'bg-indigo-400'}`}
+                        style={{ width: `${cat.percentage}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Riwayat Transaksi */}
+          <section>
+            <h3 className="text-lg font-semibold mb-4">Riwayat Terakhir</h3>
+            <div className="space-y-3">
+              {transactions.length === 0 ? (
+                <p className="text-center text-slate-500 py-4 text-sm">Belum ada transaksi.</p>
+              ) : (
+                transactions.map((t) => (
+                  <div key={t.id} className="bg-slate-800/80 rounded-2xl p-4 flex items-center justify-between border border-slate-700/30 group">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-slate-700/50 p-3 rounded-xl">
+                        {getCategoryIcon(t.category)}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-slate-200 text-sm">{t.category}</p>
+                        <p className="text-xs text-slate-400 mt-0.5 w-32 truncate">{t.note}</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <p className={`font-bold text-sm ${t.type === 'income' ? 'text-emerald-400' : 'text-slate-200'}`}>
+                        {t.type === 'income' ? '+' : '-'}{formatIDR(t.amount)}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-[10px] text-slate-500">{new Date(t.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</p>
+                        <button onClick={() => handleDelete(t.id)} className="text-slate-500 hover:text-rose-400 cursor-pointer">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+        </main>
+
+        {/* Tombol Tambah (FAB) */}
+        <div className="absolute bottom-6 left-0 right-0 flex justify-center z-10">
+          <button 
+            onClick={() => setIsFormOpen(true)}
+            className="bg-indigo-500 hover:bg-indigo-600 text-white rounded-full p-4 shadow-[0_0_20px_rgba(99,102,241,0.4)] transition-transform active:scale-95 flex items-center gap-2"
+          >
+            <Plus size={24} />
+            <span className="font-semibold pr-2">Catat Duit</span>
+          </button>
+        </div>
+
+        {/* Modal Form */}
+        {isFormOpen && (
+          <div className="absolute inset-0 z-50 flex items-end bg-black/60 backdrop-blur-sm transition-opacity">
+            <div className="bg-slate-900 w-full rounded-t-[2rem] p-6 pb-12 shadow-2xl border-t border-slate-800 animate-slide-up">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold">Catat Transaksi</h3>
+                <button onClick={() => setIsFormOpen(false)} className="text-slate-400 hover:text-white p-2">
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="flex bg-slate-800 p-1 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({...formData, type: 'expense', category: categories.expense[0]})}
+                    className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${formData.type === 'expense' ? 'bg-rose-500/20 text-rose-400 shadow-sm' : 'text-slate-400'}`}
+                  >
+                    Pengeluaran
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({...formData, type: 'income', category: categories.income[0]})}
+                    className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${formData.type === 'income' ? 'bg-emerald-500/20 text-emerald-400 shadow-sm' : 'text-slate-400'}`}
+                  >
+                    Pemasukan
+                  </button>
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">Jumlah (Rp)</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">Rp</span>
+                    <input 
+                      type="number" required
+                      value={formData.amount}
+                      onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 pl-12 pr-4 text-white focus:outline-none focus:border-indigo-500 transition-all font-semibold text-lg"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs text-slate-400 mb-1 block">Kategori</label>
+                    <select 
+                      value={formData.category}
+                      onChange={(e) => setFormData({...formData, category: e.target.value})}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-indigo-500 text-sm"
+                    >
+                      {categories[formData.type].map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-400 mb-1 block">Tanggal</label>
+                    <input 
+                      type="date" required
+                      value={formData.date}
+                      onChange={(e) => setFormData({...formData, date: e.target.value})}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-indigo-500 text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">Catatan</label>
+                  <input 
+                    type="text" 
+                    value={formData.note}
+                    onChange={(e) => setFormData({...formData, note: e.target.value})}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-indigo-500 text-sm"
+                    placeholder="Opsional"
+                  />
+                </div>
+
+                <button 
+                  type="submit" 
+                  className={`w-full py-4 rounded-xl font-bold text-white transition-colors mt-2 ${formData.type === 'expense' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+                >
+                  Simpan Transaksi
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
+      </div>
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .animate-slide-up { animation: slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}} />
+    </div>
+  );
+}
